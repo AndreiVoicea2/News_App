@@ -5,6 +5,7 @@ class NewsItem {
   final int numComments;
   final int points;
 
+
   NewsItem({
     required this.title,
     required this.publicationDate,
@@ -12,4 +13,5 @@ class NewsItem {
     required this.numComments,
     required this.points,
   });
+
 }
