@@ -1,14 +1,7 @@
-/// The purpose of this project is to create a news app,
-/// with a user-friendly interface and an efficient implementation.
-///
-/// Made by: Andrei Voicea
-/// Project Location: https://github.com/AndreiVoicea2
-///
-
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'screens/news_list_page.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'models/news_item.dart';
+import 'screens/news_list_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -18,11 +11,12 @@ class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
-  _MyAppState createState() => _MyAppState();
+  State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
   bool darkMode = false;
+  final Set<NewsItem> _favoriteNews = {};
 
   final ThemeData lightTheme = ThemeData(
     useMaterial3: false,
@@ -55,6 +49,8 @@ class _MyAppState extends State<MyApp> {
       home: HomePage(
         darkMode: darkMode,
         onToggleDarkMode: () => setState(() => darkMode = !darkMode),
+        favoriteNews: _favoriteNews,
+        onRemoveFavorite: (news) => setState(() => _favoriteNews.remove(news)),
       ),
     );
   }
@@ -63,8 +59,16 @@ class _MyAppState extends State<MyApp> {
 class HomePage extends StatelessWidget {
   final bool darkMode;
   final VoidCallback onToggleDarkMode;
+  final Set<NewsItem> favoriteNews;
+  final void Function(NewsItem) onRemoveFavorite;
 
-  const HomePage({super.key, required this.darkMode, required this.onToggleDarkMode});
+  const HomePage({
+    super.key,
+    required this.darkMode,
+    required this.onToggleDarkMode,
+    required this.favoriteNews,
+    required this.onRemoveFavorite,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +81,10 @@ class HomePage extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const FavoritesPage(),
+                  builder: (_) => FavoritePage(
+                    favorites: favoriteNews,
+                    onRemove: onRemoveFavorite,
+                  ),
                 ),
               );
             },
@@ -85,7 +92,7 @@ class HomePage extends StatelessWidget {
               'Favorites',
               style: TextStyle(
                 color: darkMode ? Colors.white : Colors.black,
-                fontSize: 20.0,
+                fontSize: 18,
               ),
             ),
           ),
@@ -95,60 +102,55 @@ class HomePage extends StatelessWidget {
           ),
         ],
       ),
-      body: const NewsListPage(),
+      body: NewsListPage(
+        favoriteNews: favoriteNews,
+        onOpenNews: (url) async {
+          final uri = Uri.tryParse(url);
+          if (uri != null && await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Could not open link')),
+            );
+          }
+        },
+      ),
     );
   }
 }
 
-class FavoritesPage extends StatefulWidget {
-  const FavoritesPage({super.key});
+class FavoritePage extends StatelessWidget {
+  final Set<NewsItem> favorites;
+  final void Function(NewsItem) onRemove;
 
-  @override
-  _FavoritesPageState createState() => _FavoritesPageState();
-}
-
-class _FavoritesPageState extends State<FavoritesPage> {
-  Future<List<NewsItem>> loadFavoriteItems() async {
-    final prefs = await SharedPreferences.getInstance();
-    final List<String> titles = prefs.getStringList('favorites') ?? [];
-    return titles
-        .map((title) => NewsItem(
-      title: title,
-      publicationDate: '',
-      author: '',
-      numComments: 0,
-      points: 0,
-    ))
-        .toList();
-  }
+  const FavoritePage({super.key, required this.favorites, required this.onRemove});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Favorites'),
-      ),
-      body: FutureBuilder<List<NewsItem>>(
-        future: loadFavoriteItems(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return const Center(child: Text('Failed to load favorites'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No favorites yet.'));
-          }
-          final favorites = snapshot.data!;
-          return ListView.builder(
-            itemCount: favorites.length,
-            itemBuilder: (context, index) {
-              final item = favorites[index];
-              return Card(
-                margin: const EdgeInsets.all(8.0),
-                child: ListTile(
-                  title: Text(item.title),
-                ),
-              );
+      appBar: AppBar(title: const Text('Favorites')),
+      body: favorites.isEmpty
+          ? const Center(child: Text('No favorites yet'))
+          : ListView.builder(
+        itemCount: favorites.length,
+        itemBuilder: (context, index) {
+          final news = favorites.elementAt(index);
+          return ListTile(
+            title: Text(news.title),
+            subtitle: Text('By ${news.author}'),
+            trailing: IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: () => onRemove(news),
+            ),
+            onTap: () async {
+              final uri = Uri.tryParse(news.url);
+              if (uri != null && await canLaunchUrl(uri)) {
+                await launchUrl(uri);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Could not open link')),
+                );
+              }
             },
           );
         },
