@@ -4,15 +4,21 @@ import 'package:http/http.dart' as http;
 import '../models/news_item.dart';
 
 class NewsListPage extends StatefulWidget {
-  const NewsListPage();
+  final Set<NewsItem> favoriteNews;
+  final void Function(String) onOpenNews;
+
+  const NewsListPage({
+    required this.favoriteNews,
+    required this.onOpenNews,
+  });
 
   @override
   _NewsListPageState createState() => _NewsListPageState();
 }
 
+
 class _NewsListPageState extends State<NewsListPage> {
   late Future<List<NewsItem>> _futureNews;
-  final Set<int> _favoriteIndexes = {};
 
   @override
   void initState() {
@@ -33,6 +39,7 @@ class _NewsListPageState extends State<NewsListPage> {
         author: item['author'] ?? 'Unknown',
         numComments: item['num_comments'] ?? 0,
         points: item['points'] ?? 0,
+        url: item['url'] ?? '',
       )).toList();
     } else {
       throw Exception('Failed to load news');
@@ -56,73 +63,68 @@ class _NewsListPageState extends State<NewsListPage> {
           itemCount: newsItems.length,
           itemBuilder: (context, index) {
             final news = newsItems[index];
-            final isFavorite = _favoriteIndexes.contains(index);
+            final isFavorite = widget.favoriteNews.contains(news);
             return Card(
               margin: const EdgeInsets.all(8.0),
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
-                child: Column(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            news.title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                news.title,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
+                                news.publicationDate,
+                                style: TextStyle(color: Colors.grey[600]),
                               ),
-                              const SizedBox(height: 6),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    news.publicationDate,
-                                    style: TextStyle(color: Colors.grey[600]),
-                                  ),
-                                  Text(
-                                    'By ${news.author}',
-                                    style: TextStyle(color: Colors.grey[600]),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  const Icon(Icons.comment, size: 16, color: Colors.grey),
-                                  const SizedBox(width: 4),
-                                  Text('${news.numComments}'),
-                                  const SizedBox(width: 16),
-                                  const Icon(Icons.thumb_up, size: 16, color: Colors.grey),
-                                  const SizedBox(width: 4),
-                                  Text('${news.points}'),
-                                ],
+                              Text(
+                                'By ${news.author}',
+                                style: TextStyle(color: Colors.grey[600]),
                               ),
                             ],
                           ),
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            isFavorite ? Icons.star : Icons.star_border,
-                            color: isFavorite ? Colors.amber : Colors.grey,
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Icon(Icons.comment, size: 16, color: Colors.grey),
+                              const SizedBox(width: 4),
+                              Text('${news.numComments}'),
+                              const SizedBox(width: 16),
+                              const Icon(Icons.thumb_up, size: 16, color: Colors.grey),
+                              const SizedBox(width: 4),
+                              Text('${news.points}'),
+                            ],
                           ),
-                          onPressed: () {
-                            setState(() {
-                              if (isFavorite) {
-                                _favoriteIndexes.remove(index);
-                              } else {
-                                _favoriteIndexes.add(index);
-                              }
-                            });
-                          },
-                        ),
-                      ],
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        isFavorite ? Icons.star : Icons.star_border,
+                        color: isFavorite ? Colors.amber : Colors.grey,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          if (isFavorite) {
+                            widget.favoriteNews.remove(news);
+                          } else {
+                            widget.favoriteNews.add(news);
+                          }
+                        });
+                      },
                     ),
                   ],
                 ),
