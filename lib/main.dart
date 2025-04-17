@@ -6,14 +6,16 @@
 ///
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/news_list_page.dart';
+import 'models/news_item.dart';
 
 void main() {
   runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp();
+  const MyApp({super.key});
 
   @override
   _MyAppState createState() => _MyAppState();
@@ -21,7 +23,6 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   bool darkMode = false;
-
 
   final ThemeData lightTheme = ThemeData(
     useMaterial3: false,
@@ -33,7 +34,6 @@ class _MyAppState extends State<MyApp> {
     ),
     cardColor: const Color(0xFFFFF3E0),
   );
-
 
   final ThemeData darkTheme = ThemeData(
     brightness: Brightness.dark,
@@ -52,20 +52,106 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       title: 'News App',
       theme: darkMode ? darkTheme : lightTheme,
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text("News"),
-        ),
-        body: NewsListPage(),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            setState(() {
-              darkMode = !darkMode;
-            });
-          },
-          child: const Icon(Icons.brightness_6),
-        ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
+      home: HomePage(
+        darkMode: darkMode,
+        onToggleDarkMode: () => setState(() => darkMode = !darkMode),
+      ),
+    );
+  }
+}
+
+class HomePage extends StatelessWidget {
+  final bool darkMode;
+  final VoidCallback onToggleDarkMode;
+
+  const HomePage({super.key, required this.darkMode, required this.onToggleDarkMode});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('News', style: TextStyle(fontSize: 20)),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const FavoritesPage(),
+                ),
+              );
+            },
+            child: Text(
+              'Favorites',
+              style: TextStyle(
+                color: darkMode ? Colors.white : Colors.black,
+                fontSize: 20.0,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.brightness_6),
+            onPressed: onToggleDarkMode,
+          ),
+        ],
+      ),
+      body: const NewsListPage(),
+    );
+  }
+}
+
+class FavoritesPage extends StatefulWidget {
+  const FavoritesPage({super.key});
+
+  @override
+  _FavoritesPageState createState() => _FavoritesPageState();
+}
+
+class _FavoritesPageState extends State<FavoritesPage> {
+  Future<List<NewsItem>> loadFavoriteItems() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> titles = prefs.getStringList('favorites') ?? [];
+    return titles
+        .map((title) => NewsItem(
+      title: title,
+      publicationDate: '',
+      author: '',
+      numComments: 0,
+      points: 0,
+    ))
+        .toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Favorites'),
+      ),
+      body: FutureBuilder<List<NewsItem>>(
+        future: loadFavoriteItems(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return const Center(child: Text('Failed to load favorites'));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('No favorites yet.'));
+          }
+          final favorites = snapshot.data!;
+          return ListView.builder(
+            itemCount: favorites.length,
+            itemBuilder: (context, index) {
+              final item = favorites[index];
+              return Card(
+                margin: const EdgeInsets.all(8.0),
+                child: ListTile(
+                  title: Text(item.title),
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }
