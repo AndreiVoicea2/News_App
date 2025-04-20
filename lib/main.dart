@@ -1,23 +1,31 @@
+/// Project purpose: News Application.
+/// Class purpose: app initialization, widget tree setup and app configuration.
+/// Made by: Andrei Voicea
+/// Project Location: https://github.com/AndreiVoicea2
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'models/news_item.dart';
 import 'screens/news_list_page.dart';
 import 'screens/favorite_page.dart';
+import 'PreferencesService.dart';
 
 void main() {
   runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  const MyApp();
 
   @override
   State<MyApp> createState() => _MyAppState();
+
 }
 
 class _MyAppState extends State<MyApp> {
   bool darkMode = false;
-  final Set<NewsItem> _favoriteNews = {};
+  Set<NewsItem> _favoriteNews = {};
+
 
   final ThemeData lightTheme = ThemeData(
     useMaterial3: false,
@@ -49,13 +57,19 @@ class _MyAppState extends State<MyApp> {
       theme: darkMode ? darkTheme : lightTheme,
       home: HomePage(
         darkMode: darkMode,
+        //function without parameters which inverts the darkMode flag
         onToggleDarkMode: () => setState(() => darkMode = !darkMode),
         favoriteNews: _favoriteNews,
-        onRemoveFavorite: (news) => setState(() => _favoriteNews.remove(news)),
+        onRemoveFavorite: (news) {
+          setState(() => _favoriteNews.remove(news));
+          PreferencesService.saveFavoriteNews(_favoriteNews);
+        },
       ),
     );
   }
 }
+
+
 
 class HomePage extends StatelessWidget {
   final bool darkMode;
@@ -64,7 +78,6 @@ class HomePage extends StatelessWidget {
   final void Function(NewsItem) onRemoveFavorite;
 
   const HomePage({
-    super.key,
     required this.darkMode,
     required this.onToggleDarkMode,
     required this.favoriteNews,

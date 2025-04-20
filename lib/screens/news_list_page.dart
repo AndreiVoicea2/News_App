@@ -1,21 +1,30 @@
+/// Class purpose: stateful widget that serves as the main screen for displaying
+/// a list of news articles, including filtering, sorting, searching, and
+/// favoriting functionality.
+
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import '../models/news_item.dart';
+import '../PreferencesService.dart';
+
+
 
 class NewsListPage extends StatefulWidget {
-  final Set<NewsItem> favoriteNews;
+  late Set<NewsItem> favoriteNews;
   final void Function(String) onOpenNews;
 
-  const NewsListPage({
+  NewsListPage({
     required this.favoriteNews,
     required this.onOpenNews,
+
   });
 
   @override
   _NewsListPageState createState() => _NewsListPageState();
 }
+
 
 class _NewsListPageState extends State<NewsListPage> {
   late Future<List<NewsItem>> _futureNews;
@@ -34,9 +43,18 @@ class _NewsListPageState extends State<NewsListPage> {
 
   final DateFormat _dateFmt = DateFormat.yMMMd();
 
+
+
   @override
   void initState() {
     super.initState();
+
+    PreferencesService.loadFavoriteNews().then((favorites) {
+      setState(() {
+        widget.favoriteNews.addAll(favorites);
+      });
+    });
+
     final now = DateTime.now();
     _dateLimitMax = now.millisecondsSinceEpoch.toDouble();
     _dateLimitMin = now
@@ -276,7 +294,10 @@ class _NewsListPageState extends State<NewsListPage> {
                                 widget.favoriteNews.remove(news);
                               else
                                 widget.favoriteNews.add(news);
+
+                              PreferencesService.saveFavoriteNews(widget.favoriteNews);
                             }),
+
                           ),
                         ],
                       ),
