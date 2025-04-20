@@ -1,3 +1,7 @@
+/// Class purpose: This class is used to display a screen where users can view
+/// their favorite news items, remove them from the list, and navigate to the
+/// news article if desired.
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/news_item.dart';
@@ -6,7 +10,7 @@ class FavoritePage extends StatelessWidget {
   final Set<NewsItem> favorites;
   final void Function(NewsItem) onRemove;
 
-  const FavoritePage({super.key, required this.favorites, required this.onRemove});
+  const FavoritePage({required this.favorites, required this.onRemove});
 
   @override
   Widget build(BuildContext context) {
